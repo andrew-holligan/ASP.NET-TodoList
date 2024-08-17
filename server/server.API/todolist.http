@@ -1,0 +1,26 @@
+GET http://localhost:5088
+
+###
+GET http://localhost:5088/todolists
+
+###
+GET http://localhost:5088/todolists/1
+
+###
+POST http://localhost:5088/todolists
+Content-Type: application/json
+
+{
+    "Name": "testList"
+}
+
+###
+PUT http://localhost:5088/todolists/1
+Content-Type: application/json
+
+{
+    "Name": "updatedList"
+}
+
+###
+DELETE http://localhost:5088/todolists/1
