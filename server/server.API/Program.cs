@@ -7,7 +7,7 @@ var connectionString = builder.Configuration.GetConnectionString("TodoList");
 builder.Services.AddSqlite<TodoListContext>(connectionString);
 
 var app = builder.Build();
-app.MapTodoListsEndpoints();
 
-app.MigrateDb();
+app.MapTodoListsEndpoints();
+await app.MigrateDbAsync();
 app.Run();

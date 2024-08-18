@@ -1,52 +1,79 @@
+using Microsoft.EntityFrameworkCore;
+using server.API.Data;
 using server.API.DTOs;
+using server.API.Entities;
+using server.API.Mapping;
 
 namespace server.API.Endpoints;
 
 public static class TodoListsEndpoints
 {
     const string EndpointNameGetTodoList = "GetTodoList";
-    private static readonly List<TodoListDTO> todolists = [];
 
     public static RouteGroupBuilder MapTodoListsEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("todolists").WithParameterValidation();
+        var group = app.MapGroup("todolists")
+            .WithParameterValidation();
 
         // GET /todolists
-        group.MapGet("/", () => todolists);
+        group.MapGet("/", async (TodoListContext dbContext) =>
+            await dbContext.TodoLists
+                .Select(todolist => todolist.ToDTO())
+                .AsNoTracking()
+                .ToListAsync()
+        );
 
         // GET /todolists/{id}
-        group.MapGet("/{id}", (int id) =>
+        var todolistWithIdGroup = group.MapGroup("/{id}")
+            .WithParameterValidation();
+
+        todolistWithIdGroup.MapGet("/", async (int id, TodoListContext dbContext) =>
         {
-            TodoListDTO? todolist = todolists.Find(todolist => todolist.Id == id);
-            return todolist is null ? Results.NotFound() : Results.Ok(todolist);
+            TodoList? todolist = await dbContext.TodoLists
+                .FindAsync(id);
+
+            return todolist is null ? Results.NotFound() : Results.Ok(todolist.ToDTO());
         })
-            .WithName(EndpointNameGetTodoList);
+        .WithName(EndpointNameGetTodoList);
+
+        // Mapping TodoListItems Endpoints
+        // /todolists/{id}/items
+        todolistWithIdGroup.MapTodoListItemsEndpoints();
 
         // POST /todolists
-        group.MapPost("/", (CreateTodoListDTO newTodoList) =>
+        group.MapPost("/", async (CreateTodoListDTO newTodoList, TodoListContext dbContext) =>
         {
-            TodoListDTO todolist = new TodoListDTO(todolists.Count + 1, newTodoList.Name);
-            todolists.Add(todolist);
-            return Results.CreatedAtRoute(EndpointNameGetTodoList, new { id = todolist.Id }, todolist);
+            TodoList todolist = newTodoList.ToEntity();
+
+            dbContext.TodoLists.Add(todolist);
+            await dbContext.SaveChangesAsync();
+
+            return Results.CreatedAtRoute(EndpointNameGetTodoList, new { id = todolist.Id }, todolist.ToDTO());
         });
 
         // PUT /todolists/{id}
-        group.MapPut("/{id}", (int id, UpdateTodoListDTO updatedTodoList) =>
+        group.MapPut("/{id}", async (int id, UpdateTodoListDTO updatedTodoList, TodoListContext dbContext) =>
         {
-            var index = todolists.FindIndex(todolist => todolist.Id == id);
-            if (index == -1)
-            {
-                return Results.NotFound();
-            }
+            var existingTodoList = await dbContext.TodoLists
+                .FindAsync(id);
 
-            todolists[index] = new TodoListDTO(id, updatedTodoList.Name);
+            if (existingTodoList is null) return Results.NotFound();
+
+            dbContext.Entry(existingTodoList)
+                .CurrentValues
+                .SetValues(updatedTodoList.ToEntity(id));
+            await dbContext.SaveChangesAsync();
+
             return Results.NoContent();
         });
 
         // DELETE /todolists/{id}
-        group.MapDelete("/{id}", (int id) =>
+        group.MapDelete("/{id}", async (int id, TodoListContext dbContext) =>
         {
-            todolists.RemoveAll(todolist => todolist.Id == id);
+            await dbContext.TodoLists
+                .Where(todolist => todolist.Id == id)
+                .ExecuteDeleteAsync();
+
             return Results.NoContent();
         });
 

@@ -1,5 +1,7 @@
 GET http://localhost:5088
 
+// todolists
+
 ###
 GET http://localhost:5088/todolists
 
@@ -24,3 +26,32 @@ Content-Type: application/json
 
 ###
 DELETE http://localhost:5088/todolists/1
+
+// items
+
+###
+GET http://localhost:5088/todolists/1/items
+
+###
+GET http://localhost:5088/todolists/1/items/1
+
+###
+POST http://localhost:5088/todolists/1/items
+Content-Type: application/json
+
+{
+    "Description": "test item",
+    "Completed": false
+}
+
+###
+PUT http://localhost:5088/todolists/1/items/1
+Content-Type: application/json
+
+{
+    "Description": "updated item",
+    "Completed": true
+}
+
+###
+DELETE http://localhost:5088/todolists/1/items/1
